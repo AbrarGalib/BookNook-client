@@ -1,17 +1,22 @@
 "use client";
-import { use, useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { useSession } from "@/lib/auth-client"; // Added to get user email
+import { useSession } from "@/lib/auth-client"; 
+import { useParams } from "next/navigation";
 
-export default function BookDetails({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params); 
+// 1. Move all the logic into a separate internal component
+function BookDetailsContent() {
+  const params = useParams();
+  const id = params?.id as string; 
+  
   const { data: session } = useSession();
   const [book, setBook] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [borrowing, setBorrowing] = useState(false);
 
   const fetchBook = async () => {
+    if (!id) return; 
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/books/${id}`);
       if (!res.ok) throw new Error("Failed to fetch book");
@@ -36,7 +41,6 @@ export default function BookDetails({ params }: { params: Promise<{ id: string }
 
     setBorrowing(true);
     try {
-      // 1. Generate token for backend security
       const jwtRes = await fetch("/api/jwt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -45,17 +49,15 @@ export default function BookDetails({ params }: { params: Promise<{ id: string }
       if (!jwtRes.ok) throw new Error("Failed to authenticate");
       const { token } = await jwtRes.json();
 
-      // 2. Format the borrow data required by your Express backend
       const borrowData = {
         bookId: book._id,
         userEmail: session.user.email,
         bookTitle: book.title,
         bookImage: book.image,
         borrowDate: new Date().toISOString(),
-        returnDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() // 14 days from now
+        returnDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() 
       };
 
-      // 3. Send request to backend
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/borrows`, {
         method: "POST",
         headers: {
@@ -71,7 +73,7 @@ export default function BookDetails({ params }: { params: Promise<{ id: string }
       }
 
       toast.success("Book borrowed successfully!");
-      fetchBook(); // Refresh the page to show the new "Copies Left" count
+      fetchBook(); 
 
     } catch (err: any) {
       toast.error(err.message || "Something went wrong");
@@ -110,7 +112,6 @@ export default function BookDetails({ params }: { params: Promise<{ id: string }
           <p className="text-gray-300 leading-relaxed mb-8">{book.description}</p>
 
           <div className="flex items-center gap-4">
-            {/* Added onClick={handleBorrow} and loading state to the button */}
             <button 
               onClick={handleBorrow}
               disabled={book.totalCopies <= 0 || borrowing}
@@ -127,5 +128,14 @@ export default function BookDetails({ params }: { params: Promise<{ id: string }
 
       </div>
     </div>
+  );
+}
+
+// 2. Wrap the component in Suspense so Next.js can safely build the project
+export default function BookDetails() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#111812] text-[#95C8A1]">Loading...</div>}>
+      <BookDetailsContent />
+    </Suspense>
   );
 }

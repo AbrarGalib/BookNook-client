@@ -1,11 +1,12 @@
 "use client";
-import { use, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { use, useEffect, useState, Suspense } from "react";
+import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner";
 
-export default function UpdateBookPage({ params }: { params: Promise<{ id: string }> }) {
-  // 1. Unwrap the Next.js 15 params promise
-  const { id } = use(params); 
+// 1. Move all update logic into an internal component
+function UpdateBookContent() {
+  const params = useParams();
+  const id = params?.id as string; 
   const router = useRouter();
   
   const [loading, setLoading] = useState(true);
@@ -18,8 +19,8 @@ export default function UpdateBookPage({ params }: { params: Promise<{ id: strin
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState(""); 
 
-  // 2. Fetch the book and populate the form states
   useEffect(() => {
+    if (!id) return;
     const fetchBook = async () => {
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/books/${id}`);
@@ -151,5 +152,14 @@ export default function UpdateBookPage({ params }: { params: Promise<{ id: strin
         </form>
       </div>
     </div>
+  );
+}
+
+// 2. Wrap the page in Suspense for safe prerendering during builds
+export default function UpdateBookPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#111812] text-[#95C8A1]">Loading...</div>}>
+      <UpdateBookContent />
+    </Suspense>
   );
 }
