@@ -3,16 +3,21 @@ import { useEffect, useState } from "react";
 import { useSession } from "@/lib/auth-client";
 import { toast } from "sonner";
 import PrivateRoute from "@/components/PrivateRoute";
+import Link from "next/link";
 
 export default function MyBooksPage() {
   const { data: session } = useSession();
   const [myBooks, setMyBooks] = useState([]);
 
   useEffect(() => {
+    // Dynamic page title per assignment requirements
+    document.title = "BookNook | My Books";
+
     if (session) {
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/books`)
         .then(res => res.json())
         .then(data => {
+          // Filter out only the books added by the logged-in user
           const filtered = data.filter((book: any) => book.addedBy?.email === session.user.email);
           setMyBooks(filtered);
         });
@@ -29,6 +34,8 @@ export default function MyBooksPage() {
         headers: { "authorization": `Bearer ${token}` }
       });
       if (!res.ok) throw new Error();
+      
+      // Update UI immediately without needing a page refresh
       setMyBooks(myBooks.filter((b: any) => b._id !== id));
       toast.success("Book deleted successfully");
     } catch (err) {
@@ -59,8 +66,20 @@ export default function MyBooksPage() {
                     <td className="p-4 text-sm text-gray-300">{book.author}</td>
                     <td className="p-4 text-sm text-gray-300">{book.category}</td>
                     <td className="p-4 text-sm">{book.totalCopies}</td>
-                    <td className="p-4">
-                      <button onClick={() => handleDelete(book._id)} className="bg-red-500/10 text-red-400 border border-red-500/20 px-4 py-1.5 rounded text-xs font-bold hover:bg-red-500 hover:text-white transition">
+                    <td className="p-4 flex gap-3">
+                      {/* Edit Button routing to our Update Book page */}
+                      <Link 
+                        href={`/update-book/${book._id}`} 
+                        className="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-4 py-1.5 rounded text-xs font-bold hover:bg-blue-500 hover:text-white transition"
+                      >
+                        Edit
+                      </Link>
+                      
+                      {/* Delete Button */}
+                      <button 
+                        onClick={() => handleDelete(book._id)} 
+                        className="bg-red-500/10 text-red-400 border border-red-500/20 px-4 py-1.5 rounded text-xs font-bold hover:bg-red-500 hover:text-white transition"
+                      >
                         Delete
                       </button>
                     </td>
@@ -68,7 +87,9 @@ export default function MyBooksPage() {
                 ))}
               </tbody>
             </table>
-            {myBooks.length === 0 && <p className="p-6 text-center text-gray-500">You haven't added any books yet.</p>}
+            {myBooks.length === 0 && (
+              <p className="p-6 text-center text-gray-500">You haven't added any books yet.</p>
+            )}
           </div>
         </div>
       </div>
