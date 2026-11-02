@@ -8,13 +8,24 @@ import "swiper/css/pagination";
 
 export default function HomePage() {
   const [newBooks, setNewBooks] = useState([]);
+  
+  // 1. Add the isMounted state back
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    // 2. Set isMounted to true once the browser loads
+    setIsMounted(true);
+    
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/books?limit=6`)
       .then((res) => res.json())
       .then((data) => setNewBooks(data))
       .catch((err) => console.error(err));
   }, []);
+
+  // 3. Return a safe, empty placeholder while server renders
+  if (!isMounted) {
+    return <main className="min-h-screen bg-[#111812]"><div className="h-[70vh] w-full bg-[#1A241B]"></div></main>;
+  }
 
   return (
     <div className="bg-[#111812] text-white">

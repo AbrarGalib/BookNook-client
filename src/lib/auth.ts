@@ -7,4 +7,4 @@ const client = new MongoClient(process.env.MONGODB_URI as string); // Add MONGOD
 export const auth = betterAuth({
   database: mongodbAdapter(client.db("bookNookDB")),
   emailAndPassword: { enabled: true },
-});npm
+});

@@ -13,6 +13,8 @@
     "better-auth": "^1.7.15",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.1",
+    "js-cookie": "^3.0.8",
+    "jsonwebtoken": "^9.0.3",
     "lucide-react": "^1.66.0",
     "mongodb": "^7.8.0",
     "next": "16.4.3",
@@ -25,6 +27,7 @@
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

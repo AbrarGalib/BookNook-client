@@ -1,62 +1,155 @@
 "use client";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import PrivateRoute from "@/components/PrivateRoute";
+import { toast } from "sonner";
 
-export default function UpdateBookPage({ params }: { params: { id: string } }) {
+export default function UpdateBookPage({ params }: { params: Promise<{ id: string }> }) {
+  // 1. Unwrap the Next.js 15 params promise
+  const { id } = use(params); 
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({ title: "", author: "", category: "", totalCopies: 0, description: "" });
+  
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
+  
+  const [title, setTitle] = useState("");
+  const [author, setAuthor] = useState("");
+  const [category, setCategory] = useState("Fiction");
+  const [totalCopies, setTotalCopies] = useState("");
+  const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState(""); 
 
+  // 2. Fetch the book and populate the form states
   useEffect(() => {
-    document.title = "BookNook | Update Book";
-    const token = document.cookie.split('; ').find(row => row.startsWith('access-token='))?.split('=')[1];
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/books/${params.id}`, {
-      headers: { "authorization": `Bearer ${token}` }
-    })
-      .then(res => res.json())
-      .then(data => setFormData({ title: data.title, author: data.author, category: data.category, totalCopies: data.totalCopies, description: data.description }));
-  }, [params.id]);
+    const fetchBook = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/books/${id}`);
+        if (!res.ok) throw new Error("Failed to load book data");
+        const data = await res.json();
+        
+        setTitle(data.title);
+        setAuthor(data.author);
+        setCategory(data.category);
+        setTotalCopies(data.totalCopies.toString());
+        setDescription(data.description);
+        setImageUrl(data.image);
+      } catch (err) {
+        toast.error("Failed to load book details");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBook();
+  }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    const token = document.cookie.split('; ').find(row => row.startsWith('access-token='))?.split('=')[1];
+    setUpdating(true);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/books/${params.id}`, {
+      const updatedBook = {
+        title,
+        author,
+        category,
+        totalCopies: Number(totalCopies),
+        description,
+        image: imageUrl, 
+      };
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/books/${id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", "authorization": `Bearer ${token}` },
-        body: JSON.stringify(formData),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedBook),
       });
-      if (!res.ok) throw new Error();
+
+      if (!res.ok) throw new Error("Failed to update book");
+
       toast.success("Book updated successfully!");
-      router.push("/my-books");
-    } catch (err) {
-      toast.error("Error updating book.");
+      router.back(); 
+
+    } catch (err: any) {
+      toast.error(err.message || "Something went wrong!");
     } finally {
-      setLoading(false);
+      setUpdating(false);
     }
   };
 
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center bg-[#111812] text-[#95C8A1]">Loading Book Data...</div>;
+  }
+
   return (
-    <PrivateRoute>
-      <div className="max-w-2xl mx-auto p-8 bg-[#111812] text-white">
-        <h1 className="text-3xl font-serif mb-6 text-center text-[#95C8A1]">Update Book</h1>
+    <div className="min-h-screen bg-[#111812] py-12 px-6">
+      <div className="max-w-xl mx-auto bg-[#1A241B] p-8 rounded-xl border border-gray-800">
+        <h1 className="text-3xl font-serif text-[#95C8A1] text-center mb-8">Update Book</h1>
+        
         <form onSubmit={handleSubmit} className="space-y-4">
-          <input value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} required placeholder="Book Title" className="w-full p-3 bg-gray-900 border border-gray-800 rounded" />
-          <input value={formData.author} onChange={e => setFormData({...formData, author: e.target.value})} required placeholder="Author Name" className="w-full p-3 bg-gray-900 border border-gray-800 rounded" />
-          <select value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full p-3 bg-gray-900 border border-gray-800 rounded">
-            <option>Fiction</option><option>Science</option><option>History</option><option>Kids</option><option>Others</option>
+          <input 
+            type="text" 
+            placeholder="Book Title" 
+            required 
+            value={title} 
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full p-3 bg-gray-900 border border-gray-800 rounded text-white outline-none focus:border-[#95C8A1]"
+          />
+          
+          <input 
+            type="text" 
+            placeholder="Author Name" 
+            required 
+            value={author} 
+            onChange={(e) => setAuthor(e.target.value)}
+            className="w-full p-3 bg-gray-900 border border-gray-800 rounded text-white outline-none focus:border-[#95C8A1]"
+          />
+          
+          <select 
+            value={category} 
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full p-3 bg-gray-900 border border-gray-800 rounded text-white outline-none focus:border-[#95C8A1]"
+          >
+            <option value="Fiction">Fiction</option>
+            <option value="Science">Science</option>
+            <option value="History">History</option>
+            <option value="Kids">Kids</option>
+            <option value="Others">Others</option>
           </select>
-          <input type="number" value={formData.totalCopies} onChange={e => setFormData({...formData, totalCopies: Number(e.target.value)})} required placeholder="Total Copies" className="w-full p-3 bg-gray-900 border border-gray-800 rounded" />
-          <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} required placeholder="Description" className="w-full p-3 bg-gray-900 border border-gray-800 rounded h-32" />
-          <button disabled={loading} className="w-full p-3 bg-[#95C8A1] text-black font-bold rounded">
-            {loading ? "Updating..." : "Update Book"}
+          
+          <input 
+            type="number" 
+            placeholder="Total Copies" 
+            required 
+            min="1"
+            value={totalCopies} 
+            onChange={(e) => setTotalCopies(e.target.value)}
+            className="w-full p-3 bg-gray-900 border border-gray-800 rounded text-white outline-none focus:border-[#95C8A1]"
+          />
+          
+          <input 
+            type="url" 
+            placeholder="Book Cover Image URL" 
+            required 
+            value={imageUrl} 
+            onChange={(e) => setImageUrl(e.target.value)}
+            className="w-full p-3 bg-gray-900 border border-gray-800 rounded text-white outline-none focus:border-[#95C8A1]"
+          />
+          
+          <textarea 
+            placeholder="Description" 
+            required 
+            rows={4}
+            value={description} 
+            onChange={(e) => setDescription(e.target.value)}
+            className="w-full p-3 bg-gray-900 border border-gray-800 rounded text-white outline-none focus:border-[#95C8A1]"
+          />
+
+          <button 
+            type="submit" 
+            disabled={updating}
+            className="w-full p-3 bg-[#95C8A1] text-black font-bold rounded hover:bg-[#7eb58c] transition disabled:opacity-50 mt-4"
+          >
+            {updating ? "Updating..." : "Update Book"}
           </button>
         </form>
       </div>
-    </PrivateRoute>
+    </div>
   );
 }
